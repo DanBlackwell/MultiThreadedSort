@@ -11,6 +11,12 @@
 
 /* Function Declaration */
 
+void compare(FILE *fp, FILE *input1, FILE *input2) {
+  int *input1size;
+  fscanf(input1, "%i", input1size);
+  printf("%d integers\n", *input1size);
+}
+
 /* Main */
 
 int main(int argc, char *argv[]) {
@@ -22,8 +28,8 @@ int main(int argc, char *argv[]) {
     }
 
     FILE *fp=fopen(argv[3], "w");
-    FILE *inputf1=fopen(argv[1]);
-    FILE *inputf2=fopen(argv[2]);
+    FILE *inputf1=fopen(argv[1], "r");
+    FILE *inputf2=fopen(argv[2], "r");
 
     compare(fp, inputf1, inputf2);
 
@@ -32,9 +38,4 @@ int main(int argc, char *argv[]) {
     fclose(inputf2);
 
     return 0;
-}
-
-void compare(FILE fp, FILE input1, FILE input2) {
-  int input1size = fscanf(input1, "%d", input1size);
-  printf("%d integers\n", input1size);
 }
