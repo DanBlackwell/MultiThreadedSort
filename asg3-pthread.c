@@ -53,6 +53,7 @@ int* compare(int* list1, int list1size, int* list2, int list2size) { //returns a
   int i;
   for (i = 0; i < list1size; i++) {
     setBit(*(list1 + i), initHashMap);
+    printf("setbit for %i\n", *(list1 + i));
   }
 
 
@@ -226,14 +227,9 @@ void sort(FILE *outputfile, int* list, int threadCount) {
   }
 
   // printf("final result:\n");
-  int prevValue = -1;
   int j;
   for (j = 0; j < matchCount; j++) {
-    if (!(*(sortedArray + j) == prevValue)) { 
-     // printf("%i\n", *(sortedArray + j));
-     fprintf(outputfile, "%i\n", *(sortedArray + j));
-    }
-    prevValue = *(sortedArray + j);
+    fprintf(outputfile, "%i\n", *(sortedArray + j));
   }
 }
 
