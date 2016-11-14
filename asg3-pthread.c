@@ -5,15 +5,12 @@
 
 /* Header Declaration */
 #include <stdio.h>
-#include <pthread.h>
-
-/* Function Declaration */
-extern int *readdata(char *filename, long *number);
-
-#include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
+
+/* Function Declaration */
+extern int *readdata(char *filename, long *number);
 
 typedef struct list {
   int value;
@@ -61,7 +58,6 @@ int* compare(int* list1, int list1size, int* list2, int list2size) { //returns a
   for (i = 0; i < list2size; i++) {
     if (testBit(*(list2 + i), initHashMap) && !testBit(*(list2 + i), compareHashMap)) { //short circuit on the && operator useful here
         setBit(*(list2 + i), compareHashMap);
-
         if (!initMatch) {
           initMatch = (linkedList*)malloc(sizeof(linkedList));
           initMatch->value = *(list2 + i);
@@ -76,45 +72,6 @@ int* compare(int* list1, int list1size, int* list2, int list2size) { //returns a
         }
     }
   }
-
-  // for (int i = 0; i < input1size; i++) {
-  //   printf("bit %i: %i\n", i, testBit(i, initHashMap));
-  // }
-
-  // int input2size; 
-  // fscanf(input2, "%d", &input2size);
-  // // printf("\nFile 2: %d integers\n", input2size);
-  // linkedList* newNode;
-  // linkedList* prevNode;
-  // while(1) {
-  //   temp = fgetc(input2);
-  //   if (temp == EOF) {
-  //     break;
-  //   } else if (temp == ' ') {
-  //     numberIn[count] = '\000';
-  //     number = atoi(numberIn);
-  //     count = 0;
-  //     if (testBit(number, initHashMap)) {
-  //       if (!initMatch) {
-  //         initMatch = (linkedList*)malloc(sizeof(linkedList));
-  //         initMatch->value = number;
-  //         initMatch->positionCount = 1;
-  //         prevNode = initMatch;
-  //       } else {
-  //         newNode = (linkedList*)malloc(sizeof(linkedList));
-  //         newNode->prev = prevNode;
-  //         newNode->value = number;
-  //         newNode->positionCount = prevNode->positionCount + 1;
-  //         prevNode = newNode;
-  //       }
-  //       // printf("value: %i, positionCount: %i\n", prevNode->value, prevNode->positionCount);
-  //     }
-  //   } else {
-  //     numberIn[count] = temp;
-  //     count++;
-  //   }
-  // }
-  // fclose(input2); 
 
   matchCount = prevNode->positionCount;
   int* matchesArray = (int*)malloc(matchCount*sizeof(int));
@@ -204,8 +161,6 @@ void sort(FILE *outputfile, int* list, int threadCount) {
 
     pthread_t tid;
     pthread_create(&tid, NULL, threadHandler, &args);
-
-    mergeSort((list + leftPos), 0, rightPos - leftPos);
 
     pthread_join(tid, NULL);
 
