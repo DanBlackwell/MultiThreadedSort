@@ -1,10 +1,15 @@
 /*
 * CSCI3150 Assignment 3 - Implement pthread and openmp program
-* Feel free to modify the given code.
 *
 */
 
 /* Header Declaration */
+#include <stdio.h>
+#include <pthread.h>
+
+/* Function Declaration */
+extern int *readdata(char *filename, long *number);
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -16,12 +21,17 @@ typedef struct list {
   struct list *prev;
 } linkedList;
 
+struct args {
+  int* list;
+  int leftPos;
+  int rightPos;
+} args;
+
 int initHashMap[3125000]; //use a huge bit array to hash values - abusing global value initialisation to 0 here 
+int compareHashMap[3125000];
 linkedList *initMatch;
 int matchCount; //Necessary because malloc doesn't track array size
 int* sortedArray;
-
-/* Function Declaration */
 
 void setBit(int k, int hashMap[])
 {
@@ -39,48 +49,23 @@ int testBit(int k, int hashMap[])
 }
 
 
-int* compare(FILE *fp, FILE *input1, FILE *input2) { //returns array of matching ints
-  int input1size; 
-  fscanf(input1, "%d", &input1size);
-  printf("File 1: %d integers\n", input1size);
+int* compare(int* list1, int list1size, int* list2, int list2size) { //returns array of matching ints
+  // printf("File 1: %d integers\n", input1size);
   char temp;
   char numberIn[10];
   int count;
   int number;
-  while(1) {
-    temp = fgetc(input1);
-    if (temp == EOF) {
-      break;
-    } else if (temp == ' ') {
-      numberIn[count] = '\000';
-      number = atoi(numberIn);
-      count = 0;
-      setBit(number, initHashMap);
-    } else {
-      numberIn[count] = temp;
-      count++;
-  	}
-  } 
-  fclose(input1);
 
-  for (int i = 0; i < input1size; i++) {
-    printf("bit %i: %i\n", i, testBit(i, initHashMap));
+  for (int i = 0; i < list1size; i++) {
+    setBit(*(list1 + i), initHashMap);
   }
 
-  int input2size; 
-  fscanf(input2, "%d", &input2size);
-  printf("\nFile 2: %d integers\n", input2size);
+
   linkedList* newNode;
   linkedList* prevNode;
-  while(1) {
-    temp = fgetc(input2);
-    if (temp == EOF) {
-      break;
-    } else if (temp == ' ') {
-      numberIn[count] = '\000';
-      number = atoi(numberIn);
-      count = 0;
-      if (testBit(number, initHashMap)) {
+  for (int i = 0; i < list2size; i++) {
+    if (testBit(*(list1 + i), initHashMap) && !testBit(*(list2 + i), compareHashMap)) { //short circuit on the && operator useful here
+        setBit(*(list2 + i), compareHashMap);
         if (!initMatch) {
           initMatch = (linkedList*)malloc(sizeof(linkedList));
           initMatch->value = number;
@@ -93,22 +78,55 @@ int* compare(FILE *fp, FILE *input1, FILE *input2) { //returns array of matching
           newNode->positionCount = prevNode->positionCount + 1;
           prevNode = newNode;
         }
-        printf("value: %i, positionCount: %i\n", prevNode->value, prevNode->positionCount);
-      }
-    } else {
-      numberIn[count] = temp;
-      count++;
     }
   }
-  fclose(input2); 
+
+  // for (int i = 0; i < input1size; i++) {
+  //   printf("bit %i: %i\n", i, testBit(i, initHashMap));
+  // }
+
+  // int input2size; 
+  // fscanf(input2, "%d", &input2size);
+  // // printf("\nFile 2: %d integers\n", input2size);
+  // linkedList* newNode;
+  // linkedList* prevNode;
+  // while(1) {
+  //   temp = fgetc(input2);
+  //   if (temp == EOF) {
+  //     break;
+  //   } else if (temp == ' ') {
+  //     numberIn[count] = '\000';
+  //     number = atoi(numberIn);
+  //     count = 0;
+  //     if (testBit(number, initHashMap)) {
+  //       if (!initMatch) {
+  //         initMatch = (linkedList*)malloc(sizeof(linkedList));
+  //         initMatch->value = number;
+  //         initMatch->positionCount = 1;
+  //         prevNode = initMatch;
+  //       } else {
+  //         newNode = (linkedList*)malloc(sizeof(linkedList));
+  //         newNode->prev = prevNode;
+  //         newNode->value = number;
+  //         newNode->positionCount = prevNode->positionCount + 1;
+  //         prevNode = newNode;
+  //       }
+  //       // printf("value: %i, positionCount: %i\n", prevNode->value, prevNode->positionCount);
+  //     }
+  //   } else {
+  //     numberIn[count] = temp;
+  //     count++;
+  //   }
+  // }
+  // fclose(input2); 
 
   matchCount = prevNode->positionCount;
   int* matchesArray = (int*)malloc(matchCount*sizeof(int));
-  printf("array vals:\n");
+  // printf("array vals:\n");
   for (int i = 0; i < matchCount; i++) {
     *(matchesArray + i) = prevNode->value;
     prevNode = prevNode->prev;
-    printf("%i\n", *(matchesArray + i));
+    // printf("%i\n", *(matchesArray + i));
   }
 
   return matchesArray;
@@ -165,6 +183,11 @@ void mergeSort(int *list, int low, int high) {
   }
 }
 
+void *threadHandler(void* args) {
+  mergeSort(((struct args*) args)->list, ((struct args*) args)->leftPos, ((struct args*) args)->rightPos);
+  return NULL;
+}
+
 void sort(FILE *outputfile, int* list, int threadCount) {
   sortedArray = (int*)malloc(matchCount*sizeof(int));
   for (int i = 0; i < matchCount; i++) {
@@ -176,30 +199,41 @@ void sort(FILE *outputfile, int* list, int threadCount) {
     int rightPos = ((i + 1) * (matchCount - 1)) / threadCount;
     if (i > 0)
       leftPos++;
+
+    args.list = list;
+    args.leftPos = leftPos;
+    args.rightPos = rightPos;
+
+    pthread_t tid;
+    pthread_create(&tid, NULL, threadHandler, &args);
+
     mergeSort((list + leftPos), 0, rightPos - leftPos);
 
-    printf("thread %i sorted pos %i to %i\n", i, leftPos, rightPos);
-    for (int j = 0; j < matchCount; j++) {
-      printf("%i\n", *(sortedArray + j));
-    }
+    pthread_join(tid, NULL);
+
+    // printf("thread %i sorted pos %i to %i\n", i, leftPos, rightPos);
+    // for (int j = 0; j < matchCount; j++) {
+    //   printf("%i\n", *(sortedArray + j));
+    // }
   }
 
   for (int i = 0; i < threadCount - 1; i++) {
     int leftPos = 0;
     int midPos = ((i + 1) * (matchCount - 1)) / threadCount;
     int rightPos = ((i + 2) * (matchCount - 1)) / threadCount;
-    printf("merging from pos %i to %i with %i to %i\n", leftPos, midPos, midPos + 1, rightPos);
+    // printf("merging from pos %i to %i with %i to %i\n", leftPos, midPos, midPos + 1, rightPos);
     merge(list, leftPos, midPos, rightPos);
-    for (int i = leftPos; i <= rightPos; i++) {
-      printf("%i\n", *(list + i));
-    }
+    // for (int i = leftPos; i <= rightPos; i++) {
+    //   printf("%i\n", *(list + i));
+    // }
   }
 
-  printf("final result:\n");
+  // printf("final result:\n");
   int prevValue = -1;
     for (int j = 0; j < matchCount; j++) {
       if (!(*(sortedArray + j) == prevValue)) { 
-       printf("%i\n", *(sortedArray + j));
+       // printf("%i\n", *(sortedArray + j));
+       fprintf(outputfile, "%i\n", *(sortedArray + j));
       }
       prevValue = *(sortedArray + j);
     }
@@ -208,22 +242,25 @@ void sort(FILE *outputfile, int* list, int threadCount) {
 /* Main */
 
 int main(int argc, char *argv[]) {
-    if(argc!=5) {
-        printf("usage:\n");
-        printf("    ./asg3-openmp inputfile1 inputfile2 outputfile ThreadNum\n");
+  if(argc!=5) {
+    printf("usage:\n");
+    printf("    ./asg3-pthread inputfile1 inputfile2 outputfile ThreadNum\n");
 
-        return -1;
-    }
+    return -1;
+  }
 
-    FILE *fp=fopen(argv[3], "w");
-    FILE *inputf1=fopen(argv[1], "r");
-    FILE *inputf2=fopen(argv[2], "r");
+  int *array1, *array2;
+  long num1, num2;
 
-    int* result = compare(fp, inputf1, inputf2);
-    sort(fp, result, atoi(argv[4]));
+  array1 = readdata(argv[1], &num1);
+  array2 = readdata(argv[2], &num2);
 
-    fclose(fp);
-    fclose(inputf2);
+  /* do your assignment start from here */
 
-    return 0;
+  int* matchList = compare(array1, num1, array2, num2);
+  FILE *fp=fopen(argv[3], "w");
+  sort(fp, matchList, atoi(argv[4]));
+  fclose(fp);
+
+  return 0;
 }
