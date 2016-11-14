@@ -63,13 +63,13 @@ int* compare(int* list1, int list1size, int* list2, int list2size) { //returns a
         setBit(*(list2 + i), compareHashMap);
         if (!initMatch) {
           initMatch = (linkedList*)malloc(sizeof(linkedList));
-          initMatch->value = number;
+          initMatch->value = *(list2 + i);
           initMatch->positionCount = 1;
           prevNode = initMatch;
         } else {
           newNode = (linkedList*)malloc(sizeof(linkedList));
           newNode->prev = prevNode;
-          newNode->value = number;
+          newNode->value = *(list2 + i);
           newNode->positionCount = prevNode->positionCount + 1;
           prevNode = newNode;
         }
@@ -227,13 +227,14 @@ void sort(FILE *outputfile, int* list, int threadCount) {
 
   // printf("final result:\n");
   int prevValue = -1;
-    for (int j = 0; j < matchCount; j++) {
-      if (!(*(sortedArray + j) == prevValue)) { 
-       // printf("%i\n", *(sortedArray + j));
-       fprintf(outputfile, "%i\n", *(sortedArray + j));
-      }
-      prevValue = *(sortedArray + j);
+  int j;
+  for (j = 0; j < matchCount; j++) {
+    if (!(*(sortedArray + j) == prevValue)) { 
+     // printf("%i\n", *(sortedArray + j));
+     fprintf(outputfile, "%i\n", *(sortedArray + j));
     }
+    prevValue = *(sortedArray + j);
+  }
 }
 
 /* Main */
