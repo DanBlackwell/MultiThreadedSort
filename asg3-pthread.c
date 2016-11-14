@@ -53,15 +53,15 @@ int* compare(int* list1, int list1size, int* list2, int list2size) { //returns a
   int i;
   for (i = 0; i < list1size; i++) {
     setBit(*(list1 + i), initHashMap);
-    printf("setbit for %i\n", *(list1 + i));
   }
 
 
   linkedList* newNode;
   linkedList* prevNode;
   for (i = 0; i < list2size; i++) {
-    if (testBit(*(list1 + i), initHashMap) && !testBit(*(list2 + i), compareHashMap)) { //short circuit on the && operator useful here
+    if (testBit(*(list2 + i), initHashMap) && !testBit(*(list2 + i), compareHashMap)) { //short circuit on the && operator useful here
         setBit(*(list2 + i), compareHashMap);
+
         if (!initMatch) {
           initMatch = (linkedList*)malloc(sizeof(linkedList));
           initMatch->value = *(list2 + i);
