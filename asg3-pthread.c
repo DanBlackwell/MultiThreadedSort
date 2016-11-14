@@ -50,20 +50,15 @@ int testBit(int k, int hashMap[])
 
 
 int* compare(int* list1, int list1size, int* list2, int list2size) { //returns array of matching ints
-  // printf("File 1: %d integers\n", input1size);
-  char temp;
-  char numberIn[10];
-  int count;
-  int number;
-
-  for (int i = 0; i < list1size; i++) {
+  int i;
+  for (i = 0; i < list1size; i++) {
     setBit(*(list1 + i), initHashMap);
   }
 
 
   linkedList* newNode;
   linkedList* prevNode;
-  for (int i = 0; i < list2size; i++) {
+  for (i = 0; i < list2size; i++) {
     if (testBit(*(list1 + i), initHashMap) && !testBit(*(list2 + i), compareHashMap)) { //short circuit on the && operator useful here
         setBit(*(list2 + i), compareHashMap);
         if (!initMatch) {
@@ -123,7 +118,7 @@ int* compare(int* list1, int list1size, int* list2, int list2size) { //returns a
   matchCount = prevNode->positionCount;
   int* matchesArray = (int*)malloc(matchCount*sizeof(int));
   // printf("array vals:\n");
-  for (int i = 0; i < matchCount; i++) {
+  for (i = 0; i < matchCount; i++) {
     *(matchesArray + i) = prevNode->value;
     prevNode = prevNode->prev;
     // printf("%i\n", *(matchesArray + i));
@@ -190,11 +185,13 @@ void *threadHandler(void* args) {
 
 void sort(FILE *outputfile, int* list, int threadCount) {
   sortedArray = (int*)malloc(matchCount*sizeof(int));
-  for (int i = 0; i < matchCount; i++) {
+
+  int i;
+  for (i = 0; i < matchCount; i++) {
     *(sortedArray + i) = *(list + i);
   }
 
-  for (int i = 0; i < threadCount; i++) {
+  for (i = 0; i < threadCount; i++) {
     int leftPos = (i * (matchCount - 1)) / threadCount;
     int rightPos = ((i + 1) * (matchCount - 1)) / threadCount;
     if (i > 0)
@@ -217,7 +214,7 @@ void sort(FILE *outputfile, int* list, int threadCount) {
     // }
   }
 
-  for (int i = 0; i < threadCount - 1; i++) {
+  for (i = 0; i < threadCount - 1; i++) {
     int leftPos = 0;
     int midPos = ((i + 1) * (matchCount - 1)) / threadCount;
     int rightPos = ((i + 2) * (matchCount - 1)) / threadCount;
