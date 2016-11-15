@@ -138,11 +138,12 @@ void mergeSort(int *list, int low, int high) {
 
 void *threadHandler(void* args) {
   mergeSort(((struct args*) args)->list, ((struct args*) args)->leftPos, ((struct args*) args)->rightPos);
-  return NULL;
+  pthread_exit(NULL);
 }
 
 void sort(FILE *outputfile, int* list, int threadCount) {
   sortedArray = (int*)malloc(matchCount*sizeof(int));
+  pthread_t thread[4];
 
   int i;
   for (i = 0; i < matchCount; i++) {
@@ -159,15 +160,16 @@ void sort(FILE *outputfile, int* list, int threadCount) {
     args.leftPos = leftPos;
     args.rightPos = rightPos;
 
-    pthread_t tid;
-    pthread_create(&tid, NULL, threadHandler, &args);
-
-    pthread_join(tid, NULL);
+    pthread_create(&thread[i], NULL, threadHandler, &args);
 
     // printf("thread %i sorted pos %i to %i\n", i, leftPos, rightPos);
     // for (int j = 0; j < matchCount; j++) {
     //   printf("%i\n", *(sortedArray + j));
     // }
+  }
+
+  for (i = 0; i < threadCount; i++) { //rejoin threads
+    pthread_join(thread[i], NULL);
   }
 
   for (i = 0; i < threadCount - 1; i++) {
