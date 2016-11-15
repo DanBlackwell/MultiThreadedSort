@@ -18,7 +18,7 @@ typedef struct list {
   struct list *prev;
 } linkedList;
 
-struct args {
+typedef struct args {
   int* list;
   int leftPos;
   int rightPos;
@@ -89,12 +89,12 @@ void merge(int *list, int low, int mid, int high) {
   int l1, l2, i;
 
   for(l1 = low, l2 = mid + 1, i = low; l1 <= mid && l2 <= high; i++) {
-    // printf("comparing: %i and %i\n", *(list + l1), *(list + l2));
+    //printf("comparing: %i and %i\n", *(list + l1), *(list + l2));
     if(*(list + l1) <= *(list + l2)) {
-      // printf("chose %i for slot %i\n", *(list + l1), i);
+      //printf("chose %i for slot %i\n", *(list + l1), i);
       *(sortedArray + i) = *(list + l1++);
     } else {
-      // printf("chose %i for slot %i\n", *(list + l2), i);
+      //printf("chose %i for slot %i\n", *(list + l2), i);
       *(sortedArray + i) = *(list + l2++);
     }
   }
@@ -136,6 +136,45 @@ void mergeSort(int *list, int low, int high) {
   }
 }
 
+
+void finalMerge(int *list, int low, int mid, int high) {
+  int l1, l2, i;
+
+  for(l1 = low, l2 = mid + 1, i = low; l1 <= mid && l2 <= high; i++) {
+    printf("comparing: %i and %i\n", *(list + l1), *(list + l2));
+    if(*(list + l1) <= *(list + l2)) {
+      printf("chose %i for slot %i\n", *(list + l1), i);
+      *(sortedArray + i) = *(list + l1++);
+    } else {
+      printf("chose %i for slot %i\n", *(list + l2), i);
+      *(sortedArray + i) = *(list + l2++);
+    }
+  }
+
+  // printf("got here\n");
+  // for (int j = low; j <= high; j++) {
+  //     printf("pos %i: %i\n", j, *(sortedArray + j));
+  // }
+   
+  while(l1 <= mid) {
+    // printf("adding element %i at pos %i\n", *(list + l1), i);
+    *(sortedArray + i++) = *(list + l1++);
+  }
+
+  while(l2 <= high) {   
+    // printf("adding element %i at pos %i\n", *(list + l2), i);
+    *(sortedArray + i++) = *(list + l2++);
+  }
+
+
+  // for (int j = low; j < i; j++) {
+  //   printf("pos %i:%i\n", j, *(sortedArray + j));
+  // }
+
+  for(i = low; i <= high; i++)
+    *(list + i) = *(sortedArray + i);
+}
+
 void *threadHandler(void* args) {
   mergeSort(((struct args*) args)->list, ((struct args*) args)->leftPos, ((struct args*) args)->rightPos);
   pthread_exit(NULL);
@@ -144,6 +183,7 @@ void *threadHandler(void* args) {
 void sort(FILE *outputfile, int* list, int threadCount) {
   sortedArray = (int*)malloc(matchCount*sizeof(int));
   pthread_t thread[4];
+  args arguments[4];
 
   int i;
   for (i = 0; i < matchCount; i++) {
@@ -155,18 +195,13 @@ void sort(FILE *outputfile, int* list, int threadCount) {
     int rightPos = ((i + 1) * (matchCount - 1)) / threadCount;
     if (i > 0)
       leftPos++;
+    
+    
+    arguments[i].list = list;
+    arguments[i].leftPos = leftPos;
+    arguments[i].rightPos = rightPos;
 
-    args.list = list;
-    args.leftPos = leftPos;
-    args.rightPos = rightPos;
-
-    printf("Hi Im thread %i and I'm sorting from %i to %i (end: %i)\n", i, leftPos, rightPos, matchCount - 1);
-    pthread_create(&thread[i], NULL, threadHandler, &args);
-
-    // printf("thread %i sorted pos %i to %i\n", i, leftPos, rightPos);
-    // for (int j = 0; j < matchCount; j++) {
-    //   printf("%i\n", *(sortedArray + j));
-    // }
+    pthread_create(&thread[i], NULL, threadHandler, &arguments[i]);
   }
 
   for (i = 0; i < threadCount; i++) { //rejoin threads
@@ -177,7 +212,7 @@ void sort(FILE *outputfile, int* list, int threadCount) {
     int leftPos = 0;
     int midPos = ((i + 1) * (matchCount - 1)) / threadCount;
     int rightPos = ((i + 2) * (matchCount - 1)) / threadCount;
-    // printf("merging from pos %i to %i with %i to %i\n", leftPos, midPos, midPos + 1, rightPos);
+    //printf("merging from pos %i to %i with %i to %i\n", leftPos, midPos, midPos + 1, rightPos);
     merge(list, leftPos, midPos, rightPos);
     // for (int i = leftPos; i <= rightPos; i++) {
     //   printf("%i\n", *(list + i));

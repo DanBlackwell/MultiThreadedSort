@@ -201,9 +201,9 @@ int main(int argc, char *argv[]) {
 
   /* do your assignment start from here */
 
-  int* matchList = compare(array1, num1, array2, num2);
+  //int* matchList = compare(array1, num1, array2, num2);
   FILE *fp=fopen(argv[3], "w");
-  sort(fp, matchList, atoi(argv[4]));
+  //sort(fp, matchList, atoi(argv[4]));
   fclose(fp);
 
   return 0;
