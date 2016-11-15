@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
+#include <time.h>
 
 /* Function Declaration */
 extern int *readdata(char *filename, long *number);
@@ -47,40 +48,48 @@ int testBit(int k, int hashMap[])
 
 
 int* compare(int* list1, int list1size, int* list2, int list2size) { //returns array of matching ints
+  clock_t start = clock(), diff;
+
   int i;
   for (i = 0; i < list1size; i++) {
-    setBit(*(list1 + i), initHashMap);
+   setBit(*(list1 + i), initHashMap);
   }
 
+  diff = clock() - start;
+  int msec = diff * 1000 / CLOCKS_PER_SEC;
+  printf("setting initial array took: %dms\n", msec);  
+  start = clock();
 
   linkedList* newNode;
   linkedList* prevNode;
+  int ctr = 0, highestSeen = 0;
   for (i = 0; i < list2size; i++) {
     if (testBit(*(list2 + i), initHashMap) && !testBit(*(list2 + i), compareHashMap)) { //short circuit on the && operator useful here
-        setBit(*(list2 + i), compareHashMap);
-        if (!initMatch) {
-          initMatch = (linkedList*)malloc(sizeof(linkedList));
-          initMatch->value = *(list2 + i);
-          initMatch->positionCount = 1;
-          prevNode = initMatch;
-        } else {
-          newNode = (linkedList*)malloc(sizeof(linkedList));
-          newNode->prev = prevNode;
-          newNode->value = *(list2 + i);
-          newNode->positionCount = prevNode->positionCount + 1;
-          prevNode = newNode;
-        }
+      setBit(*(list2 + i), compareHashMap);
+      ctr++;
+      if (*(list2 + i) > highestSeen) 
+        highestSeen = *(list2 + i);
     }
   }
 
-  matchCount = prevNode->positionCount;
+  diff = clock() - start;
+  msec = diff * 1000 / CLOCKS_PER_SEC;
+  printf("creating linked list took: %dms\n", msec);
+  start = clock();
+
+  matchCount = ctr;//prevNode->positionCount;
+  int posCtr = 0;
   int* matchesArray = (int*)malloc(matchCount*sizeof(int));
-  // printf("array vals:\n");
-  for (i = 0; i < matchCount; i++) {
-    *(matchesArray + i) = prevNode->value;
-    prevNode = prevNode->prev;
-    // printf("%i\n", *(matchesArray + i));
+  printf("Match count: %i, highestSeen: %i\n", matchCount, highestSeen);
+  for (i = 0; i <= highestSeen; i++) {
+    if (testBit(i, compareHashMap)) {
+      *(matchesArray + posCtr++) = i;
+    }
   }
+
+  diff = clock() - start;
+  msec = diff * 1000 / CLOCKS_PER_SEC;
+  printf("list to array took: %dms\n", msec);
 
   return matchesArray;
 }
@@ -185,7 +194,7 @@ void sort(FILE *outputfile, int* list, int threadCount) {
   pthread_t thread[4];
   args arguments[4];
 
-  // int i;
+  int i;
   // for (i = 0; i < matchCount; i++) {
   //   *(sortedArray + i) = *(list + i);
   // }
