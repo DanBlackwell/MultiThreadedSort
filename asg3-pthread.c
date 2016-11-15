@@ -30,6 +30,7 @@ typedef struct searchArea {
   int* compareHash;
   int left;
   int right;
+  int ctrStartPos;
 } searchArea;
 
 int initHashMap[3125000]; //use a huge bit array to hash values - abusing global value initialisation to 0 here 
@@ -54,26 +55,25 @@ int testBit(int k, int hashMap[])
   return ( (hashMap[k/32] & (1 << (k%32) )) != 0 ) ;     
 }
 
-void readIntoArray(int* matchesArray, int* compareHash, int left, int right) {
+void readIntoArray(int* matchesArray, int* compareHash, int left, int right, int ctrStartPos) {
   int i, insertPos;
   for (i = left; i < right; i++) {
     if (testBit(i, compareHash)) {
-      insertPos = curPos++; //stop others inserting into our space;
-      *(matchesArray + insertPos) = i;
-      printf("added %i at pos %i\n", i, curPos - 1);
+      *(matchesArray + ctrStartPos++) = i;
+      printf("added %i at pos %i\n", i, ctrStartPos - 1);
     }
   }
 }
 
 void *threadHandler(void* args) {
-  readIntoArray(((struct searchArea*) args)->matchesArray, ((struct searchArea*) args)->compareHash, ((struct searchArea*) args)->left, ((struct searchArea*) args)->right);
+  readIntoArray(((struct searchArea*) args)->matchesArray, ((struct searchArea*) args)->compareHash, ((struct searchArea*) args)->left, ((struct searchArea*) args)->right, ((struct searchArea*) args)->ctrStartPos);
   pthread_exit(NULL);
 }
 
 int* compare(int* list1, int list1size, int* list2, int list2size, int threadCount) { //returns array of matching ints
   clock_t start = clock(), diff;
 
-  int i;
+  int i, j;
   for (i = 0; i < list1size; i++) {
    setBit(*(list1 + i), initHashMap);
   }
@@ -86,6 +86,7 @@ int* compare(int* list1, int list1size, int* list2, int list2size, int threadCou
   linkedList* newNode;
   linkedList* prevNode;
   int ctr = 0, highestSeen = 0;
+
   for (i = 0; i < list2size; i++) {
     if (testBit(*(list2 + i), initHashMap) && !testBit(*(list2 + i), compareHashMap)) { //short circuit on the && operator useful here
       setBit(*(list2 + i), compareHashMap);
@@ -93,6 +94,33 @@ int* compare(int* list1, int list1size, int* list2, int list2size, int threadCou
       if (*(list2 + i) > highestSeen) 
         highestSeen = *(list2 + i);
     }
+  }
+
+  int regionCount[threadCount] = {0};
+  int regionLeftPos[threadCount], regionRightPos[threadCount];
+  int regionStartPos[threadCount] = 0;
+  for (int i = 0; i < threadCount; i++) {
+    regionLeftPos = (i * highestSeen) / threadCount;
+    if (i > 0) 
+      regionLeftPos++;
+    regionRightPos = ((i + 1) * highestSeen) / threadCount;
+  }
+
+  for (i = 0; i < highestSeen; i++) {
+    if (testBit(i, compareHashMap)) {
+      for (j = 0; j < threadCount; j++) {
+        if (i >= regionLeftPos[j] && i < regionRightPos[j]) { //can optimise here lumping all in final segment together ie skip loop
+          regionCount[j]++;
+          break;
+        }
+      }
+    }
+  }
+
+  regionStartPos[0] = regionRightPos[0];
+  for (i = 1; i < threadCount; i++) {
+    regionStartPos[i] = regionRightPos[i] + regionStartPos[i - 1] + 1;
+    printf("region %i startPos: %i\n", i, regionStartPos[i]);
   }
 
   diff = clock() - start;
@@ -112,6 +140,7 @@ int* compare(int* list1, int list1size, int* list2, int list2size, int threadCou
     area[i].compareHash = compareHashMap;
     area[i].left = (i * highestSeen) / threadCount;
     area[i].right = ((i + 1) * highestSeen) / threadCount;
+    area[i].ctrStartPos = regionStartPos[i];
     if (i > 0)
       area[i].left++;
 
