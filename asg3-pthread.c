@@ -57,10 +57,12 @@ int testBit(int k, int hashMap[])
 
 void readIntoArray(int* matchesArray, int* compareHash, int left, int right, int ctrStartPos) {
   int i, insertPos;
-  for (i = left; i < right; i++) {
+
+  printf("Thread starting from pos: %i going to pos: %i, ctrStratPos: %i\n", left, right, ctrStartPos);
+  for (i = left; i <= right; i++) {
     if (testBit(i, compareHash)) {
       *(matchesArray + ctrStartPos++) = i;
-      printf("added %i at pos %i\n", i, ctrStartPos - 1);
+ //     printf("added %i at pos %i\n", i, ctrStartPos - 1);
     }
   }
 }
@@ -70,7 +72,7 @@ void *threadHandler(void* args) {
   pthread_exit(NULL);
 }
 
-int* compare(int* list1, int list1size, int* list2, int list2size, int threadCount) { //returns array of matching ints
+int* compare(int* list1, int list1size, int* list2, int list2size, int threadCount, FILE* output) { //returns array of matching ints
   clock_t start = clock(), diff;
 
   int i, j;
@@ -96,30 +98,37 @@ int* compare(int* list1, int list1size, int* list2, int list2size, int threadCou
     }
   }
 
-  int regionCount[threadCount] = {0};
+  int regionCount[threadCount];
   int regionLeftPos[threadCount], regionRightPos[threadCount];
-  int regionStartPos[threadCount] = 0;
-  for (int i = 0; i < threadCount; i++) {
-    regionLeftPos = (i * highestSeen) / threadCount;
+  int regionStartPos[threadCount];
+  for (i = 0; i < threadCount; i++) {
+    regionCount[i] = 0;
+    regionStartPos[i] = 0;
+  }
+
+  for (i = 0; i < threadCount; i++) {
+    regionLeftPos[i] = (i * highestSeen) / threadCount;
     if (i > 0) 
-      regionLeftPos++;
-    regionRightPos = ((i + 1) * highestSeen) / threadCount;
+      regionLeftPos[i]++;
+    regionRightPos[i] = ((i + 1) * highestSeen) / threadCount;
+    printf("Region %i, leftPos: %i, rightPos: %i\n", i, regionLeftPos[i], regionRightPos[i]);
   }
 
   for (i = 0; i < highestSeen; i++) {
     if (testBit(i, compareHashMap)) {
       for (j = 0; j < threadCount; j++) {
-        if (i >= regionLeftPos[j] && i < regionRightPos[j]) { //can optimise here lumping all in final segment together ie skip loop
+        if (i >= regionLeftPos[j] && i <= regionRightPos[j]) { //can optimise here lumping all in final segment together ie skip loop
           regionCount[j]++;
+         // printf("Added %i between %i and %i\n", i, regionLeftPos[j], regionRightPos[j]);
           break;
         }
       }
     }
   }
 
-  regionStartPos[0] = regionRightPos[0];
+  regionStartPos[0] = 0;
   for (i = 1; i < threadCount; i++) {
-    regionStartPos[i] = regionRightPos[i] + regionStartPos[i - 1] + 1;
+    regionStartPos[i] = regionCount[i - 1] + regionStartPos[i - 1];
     printf("region %i startPos: %i\n", i, regionStartPos[i]);
   }
 
@@ -131,7 +140,7 @@ int* compare(int* list1, int list1size, int* list2, int list2size, int threadCou
   matchCount = ctr;//prevNode->positionCount;
   int posCtr = 0;
   int* matchesArray = (int*)malloc(matchCount*sizeof(int));
-  printf("Match count: %i, highestSeen: %i\n", matchCount, highestSeen);
+//  printf("Match count: %i, highestSeen: %i\n", matchCount, highestSeen);
   
   pthread_t thread[threadCount];
   searchArea area[threadCount];
@@ -149,6 +158,12 @@ int* compare(int* list1, int list1size, int* list2, int list2size, int threadCou
 
   for (i = 0; i < threadCount; i++) {
     pthread_join(thread[i], NULL);
+  }
+
+//  printf("Match Array:\n");
+  for (i = 0; i < matchCount; i++) {
+ //   printf("%i: %i\n", i, *(matchesArray + i));
+    fprintf(output, "%i\n", *(matchesArray + i));
   }
 
   // for (i = 0; i <= highestSeen; i++) {
@@ -325,8 +340,8 @@ int main(int argc, char *argv[]) {
 
   /* do your assignment start from here */
 
-  int* matchList = compare(array1, num1, array2, num2, atoi(argv[4]));
   FILE *fp=fopen(argv[3], "w");
+  int* matchList = compare(array1, num1, array2, num2, atoi(argv[4]), fp);
   // sort(fp, matchList, atoi(argv[4]));
   fclose(fp);
 
