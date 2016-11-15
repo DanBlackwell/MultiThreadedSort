@@ -160,6 +160,7 @@ void sort(FILE *outputfile, int* list, int threadCount) {
     args.leftPos = leftPos;
     args.rightPos = rightPos;
 
+    printf("Hi Im thread %i and I'm sorting from %i to %i (end: %i)\n", i, leftPos, rightPos, matchCount - 1);
     pthread_create(&thread[i], NULL, threadHandler, &args);
 
     // printf("thread %i sorted pos %i to %i\n", i, leftPos, rightPos);
