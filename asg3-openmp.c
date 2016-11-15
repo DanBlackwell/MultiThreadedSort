@@ -40,11 +40,6 @@ void readIntoArray(int* matchesArray, int* compareHash, int left, int right, int
   }
 }
 
-void *threadHandler(void* args) {
-  readIntoArray(((struct searchArea*) args)->matchesArray, ((struct searchArea*) args)->compareHash, ((struct searchArea*) args)->left, ((struct searchArea*) args)->right, ((struct searchArea*) args)->ctrStartPos);
-  pthread_exit(NULL);
-}
-
 void compareAndOutput(int* list1, int list1size, int* list2, int list2size, int threadCount, FILE* output) {
   //In order to compare the 2 files I first mark each distinct number as "seen" in a bit array, then run thru the 2nd list,
   //seeing if that value was "seen" in the first list and marking it in the 2nd bit array. The "Sort" and output operation is as simple as iterating 
@@ -56,7 +51,7 @@ void compareAndOutput(int* list1, int list1size, int* list2, int list2size, int 
    setBit(*(list1 + i), initHashMap);
   }
 
-  int ctr = 0, highestSeen = 0;
+  int ctr = 0, highestSeen = 0, lowestSeen = 100000001;
 
   for (i = 0; i < list2size; i++) {
     if (testBit(*(list2 + i), initHashMap) && !testBit(*(list2 + i), compareHashMap)) { //short circuit on the && operator useful here
@@ -64,6 +59,8 @@ void compareAndOutput(int* list1, int list1size, int* list2, int list2size, int 
       ctr++;
       if (*(list2 + i) > highestSeen) 
         highestSeen = *(list2 + i);
+      if (*(list2 + i) < lowestSeen)
+        lowestSeen = *(list2 + i);
     }
   }
 
@@ -79,7 +76,7 @@ void compareAndOutput(int* list1, int list1size, int* list2, int list2size, int 
 
   int nextRegionToSet = 1, posCtr = 0;
   regionMin[0] = 0;
-  for (i = 0; i < highestSeen; i++) {
+  for (i = lowestSeen; i < highestSeen; i++) {
     if (testBit(i, compareHashMap)) {
       posCtr++;
       if (posCtr == regionMinCount[nextRegionToSet]) {
@@ -98,12 +95,12 @@ void compareAndOutput(int* list1, int list1size, int* list2, int list2size, int 
   for (i = 0; i < threadCount; i++) { 
     left = regionMin[i];
     if (i > 0)
-      area[i].left++;
+      left++;
     if (i < threadCount - 1)
       right = regionMin[i + 1];
     else
       right = highestSeen;
-    readIntoArray(matchesArray, compareHashMap, regionMin[i], right, regionMinCount[i]);
+    readIntoArray(matchesArray, compareHashMap, left, right, regionMinCount[i]);
   }
 
   for (i = 0; i < ctr; i++) {

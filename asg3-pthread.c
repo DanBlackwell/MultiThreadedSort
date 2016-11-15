@@ -65,7 +65,7 @@ void compareAndOutput(int* list1, int list1size, int* list2, int list2size, int 
    setBit(*(list1 + i), initHashMap);
   }
 
-  int ctr = 0, highestSeen = 0;
+  int ctr = 0, highestSeen = 0, lowestSeen = 100000001;
 
   for (i = 0; i < list2size; i++) {
     if (testBit(*(list2 + i), initHashMap) && !testBit(*(list2 + i), compareHashMap)) { //short circuit on the && operator useful here
@@ -73,6 +73,8 @@ void compareAndOutput(int* list1, int list1size, int* list2, int list2size, int 
       ctr++;
       if (*(list2 + i) > highestSeen) 
         highestSeen = *(list2 + i);
+      if (*(list2 + i) < lowestSeen)
+        lowestSeen = *(list2 + i);
     }
   }
 
@@ -88,7 +90,7 @@ void compareAndOutput(int* list1, int list1size, int* list2, int list2size, int 
 
   int nextRegionToSet = 1, posCtr = 0;
   regionMin[0] = 0;
-  for (i = 0; i < highestSeen; i++) {
+  for (i = lowestSeen; i < highestSeen; i++) {
     if (testBit(i, compareHashMap)) {
       posCtr++;
       if (posCtr == regionMinCount[nextRegionToSet]) {
