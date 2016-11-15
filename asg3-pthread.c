@@ -97,7 +97,7 @@ void compare(int* list1, int list1size, int* list2, int list2size, int threadCou
   
   pthread_t thread[threadCount];
   searchArea area[threadCount];
-  for (i = 0; i < threadCount; i++) {
+  for (i = 0; i < threadCount; i++) { //This section will scale out by a constant factor - though it makes up the minority of processing time unfortunately
     area[i].matchesArray = matchesArray;
     area[i].compareHash = compareHashMap;
     area[i].left = regionMin[i];
@@ -119,7 +119,7 @@ void compare(int* list1, int list1size, int* list2, int list2size, int threadCou
 
 //  printf("Match Array:\n");
   for (i = 0; i < ctr; i++) {
-    printf("%i: %i\n", i, *(matchesArray + i));
+    //printf("%i: %i\n", i, *(matchesArray + i));
     fprintf(output, "%i\n", *(matchesArray + i));
   }
 }
