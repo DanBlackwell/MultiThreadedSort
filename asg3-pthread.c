@@ -81,24 +81,28 @@ void compare(int* list1, int list1size, int* list2, int list2size, int threadCou
 
   int regionMinCount[threadCount], regionMin[threadCount], regionMaxPos[threadCount];
   for (i = 0; i < threadCount; i++) {
+    printf("Region min count is: %i, ctr = %i\n", (ctr * i) / threadCount, ctr);
     regionMinCount[i] = (ctr * i) / threadCount;
     if (i > 0)
       regionMinCount[i]++;
   }
 
-  int nextRegionToSet = 1, posCtr;
+  int nextRegionToSet = 1, posCtr = 0;
   regionMin[0] = 0;
   for (i = 0; i < highestSeen; i++) {
     if (testBit(i, compareHashMap)) {
       posCtr++;
-      if (posCtr == regionMinCount[nextRegionToSet])
-        regionMin[nextRegionToSet] = i + 1;
+      printf("I am at %i and I have %i mathces\n", i, posCtr);
+      if (posCtr == regionMinCount[nextRegionToSet]) {
+        regionMin[nextRegionToSet++] = i;
+        printf("The region min for %i is %i\n", nextRegionToSet - 1, regionMin[nextRegionToSet -1 ]);
+      }
     }
   }
 
-  matchCount = ctr;//prevNode->positionCount;
+
   // int posCtr = 0;
-  int* matchesArray = (int*)malloc(matchCount*sizeof(int));
+  int* matchesArray = (int*)malloc(ctr*sizeof(int));
 //  printf("Match count: %i, highestSeen: %i\n", matchCount, highestSeen);
   
   pthread_t thread[threadCount];
@@ -106,13 +110,13 @@ void compare(int* list1, int list1size, int* list2, int list2size, int threadCou
   for (i = 0; i < threadCount; i++) {
     area[i].matchesArray = matchesArray;
     area[i].compareHash = compareHashMap;
-    area[i].left = regionMin[threadCount];
+    area[i].left = regionMin[i];
     if (i < threadCount - 1)
-      area[i].right = regionMin[threadCount + 1];
+      area[i].right = regionMin[i + 1];
     else
       area[i].right = highestSeen;
-    area[i].ctrStartPos = regionStartPos[i];
-    printf("Searching from %i to %i\n", area[i].left, area[i].right);
+    area[i].ctrStartPos = regionMinCount[i];
+    printf("Thread %i Searching from (%i) %i to %i\n", i, regionMin[threadCount], area[i].left, area[i].right);
     if (i > 0)
       area[i].left++;
 
@@ -158,12 +162,12 @@ void compare(int* list1, int list1size, int* list2, int list2size, int threadCou
   printf("creating linked list took: %dms\n", msec);
   start = clock();
 
-  matchCount = ctr;//prevNode->positionCount;
-  int posCtr = 0;
-  int* matchesArray = (int*)malloc(matchCount*sizeof(int));
+
+//  int posCtr = 0;
+//  int* matchesArray = (int*)malloc(matchCount*sizeof(int));
 //  printf("Match count: %i, highestSeen: %i\n", matchCount, highestSeen);
   
-  pthread_t thread[threadCount];
+/*  pthread_t thread[threadCount];
   searchArea area[threadCount];
   for (i = 0; i < threadCount; i++) {
     area[i].matchesArray = matchesArray;
@@ -175,15 +179,15 @@ void compare(int* list1, int list1size, int* list2, int list2size, int threadCou
       area[i].left++;
 
     pthread_create(&thread[i], NULL, threadHandler, &area[i]);
-  }
+  } */
 
   for (i = 0; i < threadCount; i++) {
     pthread_join(thread[i], NULL);
   }
 
 //  printf("Match Array:\n");
-  for (i = 0; i < matchCount; i++) {
- //   printf("%i: %i\n", i, *(matchesArray + i));
+  for (i = 0; i < ctr; i++) {
+    printf("%i: %i\n", i, *(matchesArray + i));
     fprintf(output, "%i\n", *(matchesArray + i));
   }
 
