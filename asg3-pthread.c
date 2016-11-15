@@ -219,7 +219,6 @@ void sort(FILE *outputfile, int* list, int threadCount) {
     // }
   }
 
-  // printf("final result:\n");
   int j;
   for (j = 0; j < matchCount; j++) {
     fprintf(outputfile, "%i\n", *(sortedArray + j));
@@ -227,6 +226,7 @@ void sort(FILE *outputfile, int* list, int threadCount) {
 }
 
 /* Main */
+
 
 int main(int argc, char *argv[]) {
   if(argc!=5) {
