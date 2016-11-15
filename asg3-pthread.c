@@ -25,11 +25,19 @@ typedef struct args {
   int rightPos;
 } args;
 
+typedef struct searchArea {
+  int* matchesArray;
+  int* compareHash;
+  int left;
+  int right;
+} searchArea;
+
 int initHashMap[3125000]; //use a huge bit array to hash values - abusing global value initialisation to 0 here 
 int compareHashMap[3125000];
 linkedList *initMatch;
 int matchCount; //Necessary because malloc doesn't track array size
 int* sortedArray;
+int curPos;
 
 void setBit(int k, int hashMap[])
 {
@@ -46,8 +54,23 @@ int testBit(int k, int hashMap[])
   return ( (hashMap[k/32] & (1 << (k%32) )) != 0 ) ;     
 }
 
+void readIntoArray(int* matchesArray, int* compareHash, int left, int right) {
+  int i, insertPos;
+  for (i = left; i < right; i++) {
+    if (testBit(i, compareHash)) {
+      insertPos = curPos++; //stop others inserting into our space;
+      *(matchesArray + insertPos) = i;
+      printf("added %i at pos %i\n", i, curPos - 1);
+    }
+  }
+}
 
-int* compare(int* list1, int list1size, int* list2, int list2size) { //returns array of matching ints
+void *threadHandler(void* args) {
+  readIntoArray(((struct searchArea*) args)->matchesArray, ((struct searchArea*) args)->compareHash, ((struct searchArea*) args)->left, ((struct searchArea*) args)->right);
+  pthread_exit(NULL);
+}
+
+int* compare(int* list1, int list1size, int* list2, int list2size, int threadCount) { //returns array of matching ints
   clock_t start = clock(), diff;
 
   int i;
@@ -81,11 +104,29 @@ int* compare(int* list1, int list1size, int* list2, int list2size) { //returns a
   int posCtr = 0;
   int* matchesArray = (int*)malloc(matchCount*sizeof(int));
   printf("Match count: %i, highestSeen: %i\n", matchCount, highestSeen);
-  for (i = 0; i <= highestSeen; i++) {
-    if (testBit(i, compareHashMap)) {
-      *(matchesArray + posCtr++) = i;
-    }
+  
+  pthread_t thread[threadCount];
+  searchArea area[threadCount];
+  for (i = 0; i < threadCount; i++) {
+    area[i].matchesArray = matchesArray;
+    area[i].compareHash = compareHashMap;
+    area[i].left = (i * highestSeen) / threadCount;
+    area[i].right = ((i + 1) * highestSeen) / threadCount;
+    if (i > 0)
+      area[i].left++;
+
+    pthread_create(&thread[i], NULL, threadHandler, &area[i]);
   }
+
+  for (i = 0; i < threadCount; i++) {
+    pthread_join(thread[i], NULL);
+  }
+
+  // for (i = 0; i <= highestSeen; i++) {
+  //   if (testBit(i, compareHashMap)) {
+  //     *(matchesArray + posCtr++) = i;
+  //   }
+  // }
 
   diff = clock() - start;
   msec = diff * 1000 / CLOCKS_PER_SEC;
@@ -184,10 +225,10 @@ void finalMerge(int *list, int low, int mid, int high) {
     *(list + i) = *(sortedArray + i);
 }
 
-void *threadHandler(void* args) {
-  mergeSort(((struct args*) args)->list, ((struct args*) args)->leftPos, ((struct args*) args)->rightPos);
-  pthread_exit(NULL);
-}
+// void *threadHandler(void* args) {
+//   mergeSort(((struct args*) args)->list, ((struct args*) args)->leftPos, ((struct args*) args)->rightPos);
+//   pthread_exit(NULL);
+// }
 
 void sort(FILE *outputfile, int* list, int threadCount) {
   sortedArray = (int*)malloc(matchCount*sizeof(int));
@@ -255,9 +296,9 @@ int main(int argc, char *argv[]) {
 
   /* do your assignment start from here */
 
-  int* matchList = compare(array1, num1, array2, num2);
+  int* matchList = compare(array1, num1, array2, num2, atoi(argv[4]));
   FILE *fp=fopen(argv[3], "w");
-  sort(fp, matchList, atoi(argv[4]));
+  // sort(fp, matchList, atoi(argv[4]));
   fclose(fp);
 
   return 0;
