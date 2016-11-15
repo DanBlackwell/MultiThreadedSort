@@ -185,10 +185,12 @@ void sort(FILE *outputfile, int* list, int threadCount) {
   pthread_t thread[4];
   args arguments[4];
 
-  int i;
-  for (i = 0; i < matchCount; i++) {
-    *(sortedArray + i) = *(list + i);
-  }
+  // int i;
+  // for (i = 0; i < matchCount; i++) {
+  //   *(sortedArray + i) = *(list + i);
+  // }
+
+  memcpy(sortedArray, list, matchCount*sizeof(int));
 
   for (i = 0; i < threadCount; i++) {
     int leftPos = (i * (matchCount - 1)) / threadCount;
