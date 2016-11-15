@@ -18,12 +18,6 @@ typedef struct list {
   struct list *prev;
 } linkedList;
 
-struct args {
-  int* list;
-  int leftPos;
-  int rightPos;
-} args;
-
 int initHashMap[3125000]; //use a huge bit array to hash values - abusing global value initialisation to 0 here 
 int compareHashMap[3125000];
 linkedList *initMatch;
@@ -136,11 +130,6 @@ void mergeSort(int *list, int low, int high) {
   }
 }
 
-void *threadHandler(void* args) {
-  mergeSort(((struct args*) args)->list, ((struct args*) args)->leftPos, ((struct args*) args)->rightPos);
-  return NULL;
-}
-
 void sort(FILE *outputfile, int* list, int threadCount) {
   sortedArray = (int*)malloc(matchCount*sizeof(int));
 
@@ -159,7 +148,7 @@ void sort(FILE *outputfile, int* list, int threadCount) {
       leftPos++;
 
     mergeSort(list, leftPos, rightPos);
-    // printf("thread %i sorted pos %i to %i\n", i, leftPos, rightPos);
+    printf("thread %i sorted pos %i to %i\n", i, leftPos, rightPos);
     // for (int j = 0; j < matchCount; j++) {
     //   printf("%i\n", *(sortedArray + j));
     // }
@@ -201,9 +190,9 @@ int main(int argc, char *argv[]) {
 
   /* do your assignment start from here */
 
-  //int* matchList = compare(array1, num1, array2, num2);
+  int* matchList = compare(array1, num1, array2, num2);
   FILE *fp=fopen(argv[3], "w");
-  //sort(fp, matchList, atoi(argv[4]));
+  sort(fp, matchList, atoi(argv[4]));
   fclose(fp);
 
   return 0;
