@@ -21,12 +21,12 @@ typedef struct searchArea {
   int ctrStartPos;
 } searchArea;
 
-int initHashMap[3125000]; //use a huge bit array to hash values - abusing global value initialisation to 0 here 
+int initHashMap[3125000]; //use a huge bit array to hash values - abusing global value initialisation to 0 here; bit operation helper functions are below
 int compareHashMap[3125000];
 
 void setBit(int k, int hashMap[])
 {
-  hashMap[k/32] |= 1 << (k%32);  // With thanks to http://www.mathcs.emory.edu/~cheung/Courses/255/Syllabus/1-C-intro/bit-array.html
+  hashMap[k/32] |= 1 << (k%32);
 }
 
 void clearBit(int k, int hashMap[])                
@@ -36,13 +36,12 @@ void clearBit(int k, int hashMap[])
 
 int testBit(int k, int hashMap[])
 {
-  return ( (hashMap[k/32] & (1 << (k%32) )) != 0 ) ;     
+  return ((hashMap[k/32] & (1 << (k%32))) != 0);     
 }
 
 void readIntoArray(int* matchesArray, int* compareHash, int left, int right, int ctrStartPos) {
   int i, insertPos;
 
-  printf("Thread starting from pos: %i going to pos: %i, ctrStratPos: %i\n", left, right, ctrStartPos);
   for (i = left; i <= right; i++) {
     if (testBit(i, compareHash)) {
       *(matchesArray + ctrStartPos++) = i;
@@ -55,7 +54,12 @@ void *threadHandler(void* args) {
   pthread_exit(NULL);
 }
 
-void compare(int* list1, int list1size, int* list2, int list2size, int threadCount, FILE* output) { //returns array of matching ints
+void compareAndOutput(int* list1, int list1size, int* list2, int list2size, int threadCount, FILE* output) {
+  //In order to compare the 2 files I first mark each distinct number as "seen" in a bit array, then run thru the 2nd list,
+  //seeing if that value was "seen" in the first list and marking it in the 2nd bit array. The "Sort" and output operation is as simple as iterating 
+  //thru the 2nd bit array and outputting any values that are marked as "seen" (For scaling purposes I have split this across threads). In a sparsely
+  //paired list this would be far from optimal, but for denser lists the O(n) time makes a difference.
+
   int i, j;
   for (i = 0; i < list1size; i++) {
    setBit(*(list1 + i), initHashMap);
@@ -72,9 +76,11 @@ void compare(int* list1, int list1size, int* list2, int list2size, int threadCou
     }
   }
 
+  //This next section is merely for splitting the load evenly for parallelisation; in an evenly distributed pairs list this would be a waste of time
+  //however if all pairs were for example skewed to the lower end this would prevent all the work going to one thread
+
   int regionMinCount[threadCount], regionMin[threadCount], regionMaxPos[threadCount];
   for (i = 0; i < threadCount; i++) {
-    // printf("Region min count is: %i, ctr = %i\n", (ctr * i) / threadCount, ctr);
     regionMinCount[i] = (ctr * i) / threadCount;
     if (i > 0)
       regionMinCount[i]++;
@@ -85,19 +91,20 @@ void compare(int* list1, int list1size, int* list2, int list2size, int threadCou
   for (i = 0; i < highestSeen; i++) {
     if (testBit(i, compareHashMap)) {
       posCtr++;
-      // printf("I am at %i and I have %i mathces\n", i, posCtr);
       if (posCtr == regionMinCount[nextRegionToSet]) {
         regionMin[nextRegionToSet++] = i;
-        // printf("The region min for %i is %i\n", nextRegionToSet - 1, regionMin[nextRegionToSet -1 ]);
       }
     }
   }
+
+  //This section will scale out by a constant factor - though it makes up the minority of processing time unfortunately 
+  //meaning it will likely fail the scaleout tests given I/O time uncertainty
 
   int* matchesArray = (int*)malloc(ctr*sizeof(int));
   
   pthread_t thread[threadCount];
   searchArea area[threadCount];
-  for (i = 0; i < threadCount; i++) { //This section will scale out by a constant factor - though it makes up the minority of processing time unfortunately
+  for (i = 0; i < threadCount; i++) { 
     area[i].matchesArray = matchesArray;
     area[i].compareHash = compareHashMap;
     area[i].left = regionMin[i];
@@ -106,7 +113,6 @@ void compare(int* list1, int list1size, int* list2, int list2size, int threadCou
     else
       area[i].right = highestSeen;
     area[i].ctrStartPos = regionMinCount[i];
-    // printf("Thread %i Searching from (%i) %i to %i\n", i, regionMin[threadCount], area[i].left, area[i].right);
     if (i > 0)
       area[i].left++;
 
@@ -117,9 +123,7 @@ void compare(int* list1, int list1size, int* list2, int list2size, int threadCou
     pthread_join(thread[i], NULL);
   }
 
-//  printf("Match Array:\n");
   for (i = 0; i < ctr; i++) {
-    //printf("%i: %i\n", i, *(matchesArray + i));
     fprintf(output, "%i\n", *(matchesArray + i));
   }
 }
@@ -143,8 +147,7 @@ int main(int argc, char *argv[]) {
   /* do your assignment start from here */
 
   FILE *fp=fopen(argv[3], "w");
-  compare(array1, num1, array2, num2, atoi(argv[4]), fp);
-  // sort(fp, matchList, atoi(argv[4]));
+  compareAndOutput(array1, num1, array2, num2, atoi(argv[4]), fp);
   fclose(fp);
 
   return 0;
